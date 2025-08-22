@@ -1,0 +1,32 @@
+DATABASE:
+
+pg_dump -U kjs -h localhost -p 5432 -d kjs -Fp -f"C:\db_pg_dump.sql" -v							database with both structure & data
+
+pg_dump -U kjs -h localhost -p 5432 -d kjs -s -Fp -f"C:\db_pg_dump.sql" -v						database with only structure
+
+pg_dump -U kjs -h localhost -p 5432 -d kjs -a -Fp -f"C:\db_pg_dump.sql" -v						database with only data
+
+
+
+SCHEMA:
+
+pg_dump -U kjs -h localhost -p 5432 -n kjs -Fp -f "C:\pg_dump_schema.sql" -v				entire schema with both structure & data
+
+pg_dump -U kjs -h localhost -p 5432 -n kjs -s -Fp -f "C:\pg_dump_schema.sql" -v			entire schema with only structure
+
+pg_dump -U kjs -h localhost -p 5432 -n kjs -a -Fp -f "C:\pg_dump_schema.sql" -v			entire schema with only data
+
+
+
+TABLE:
+
+pg_dump -U kjs -h localhost -p 5432 -t materials_1 -Fp -f "C:\pg_dump_table.sql" -v			table with both structure & data
+
+pg_dump -U kjs -h localhost -p 5432 -t materials_1 -s -Fp -f "C:\pg_dump_table.sql" -v		table with only structure
+
+pg_dump -U kjs -h localhost -p 5432 -t materials_1 -a -Fp -f "C:\pg_dump_table.sql" -v		table with only data
+
+
+
+pg_dump -U kjs -h localhost -p 5432 -Fp -f"C:\db_pg_dump.sql" -v		what it backsup
+

@@ -1,0 +1,18 @@
+PgAgent - using cron job
+dump in cloud	-P
+replication
+SSL connections
+
+add hba file in server for pg_basebackup
+"pg_basebackup.exe" -U kjs -Fp -D"C:\backup_file_name.sql" -P -v   IN PGAGENTS
+
+================================================================
+DOUBTS
+
+backup protection & encryption
+how to maintain backups (backup to cloud)
+how long period data backup needed (retention period in cloud)
+how old period data should be display in application - all data
+restore backups & tests?
+
+=======================================================================================

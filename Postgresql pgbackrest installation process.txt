@@ -1,0 +1,57 @@
+1. sudo dnf update -y
+
+2. sudo yum install -y gcc make postgresql15-server-devel libxml2-devel libyaml-devel bzip2-devel
+
+3. wget https://github.com/pgbackrest/pgbackrest/archive/refs/tags/release/2.48.tar.gz
+
+4. tar xzf 2.48.tar.gz
+
+5. cd pgbackrest-release-2.48/src
+
+6. ./configure
+
+7. make
+
+8. sudo make install
+
+9. sudo mkdir -p /var/lib/pgbackrestsudo mkdir -p /var/lib/pgbackrest
+
+installing postgresql 
+10.  sudo dnf install -y postgresql15-server postgresql15
+
+11. sudo find / -name "postgresql-15-setup" 2>/dev/null
+
+12. sudo mkdir -p /var/lib/pgsql/15/data
+
+sudo chown postgres:postgres /var/lib/pgsql/15/data
+
+sudo su - postgres -c "/usr/pgsql-15/bin/initdb -D /var/lib/pgsql/15/data"
+
+sudo mkdir -p /var/lib/pgsql/15/data
+sudo chown ec2-user:ec2-user /var/lib/pgsql/15/data
+ /usr/bin/initdb -D /var/lib/pgsql/15/data
+
+sudo useradd -m -s /bin/bash postgres
+
+sudo chown -R postgres:postgres /var/lib/pgsql/15/data
+sudo su - postgres -c "/usr/bin/initdb -D /var/lib/pgsql/15/data"
+
+sudo systemctl start postgresql-15
+sudo -u postgres /usr/bin/pg_ctl -D /var/lib/pgsql/15/data -l /var/lib/pgsql/15/data/logfile start
+sudo -u postgres /usr/bin/pg_ctl -D /var/lib/pgsql/15/data stop
+
+pgbackrest binary is located at /usr/local/bin/pgbackrest
+
+verify:
+	psql --version
+	sudo systemctl status postgresql-15
+	sudo -u postgres psql -c "SELECT version();"
+
+	pgbackrest version
+
+
+stanza
+	sudo mkdir -p /var/log/pgbackrest
+	sudo chown postgres:postgres /var/log/pgbackrest
+
+sudo -u postgres pgbackrest --stanza=main info

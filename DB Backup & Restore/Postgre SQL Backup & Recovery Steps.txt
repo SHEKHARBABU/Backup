@@ -1,0 +1,157 @@
+1. PHYSICAL BACKUPS
+		1.1 FULL BACKUP
+		1.2 INCREMENTAL BACKUP
+		1.3 DIFFERENTIAL BACKUP
+
+2. LOGICAL BACKUP
+		BACKUP: pg_dump, pg_dumpall
+		RESTORE: 	psql 	- for plain pg_dump, pg_dumpall
+							pg_restore 	- for pg_dump custom or tar or directory format, parallee jobs
+
+3. WAL BACKUP
+
+============================================================================================================
+1.1. Full Base Backup 
+
+Backup:
+		1. Open CMD and navigate to POSTGRESQL's BIN Folder
+		2. Create a folder to store the backup data files, make sure it has all permissions
+		3.	Now take a full back up to this folder
+
+Restore:
+		3.	stop the postgresql service
+		4. rename the existing data folder (For backup)
+		5. copy the files from backup folder to data folder
+		6. start the service
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+1.2. Incremental Backup
+
+Backup:
+		1.	Open CMD and navigate to POSTGRESQL's BIN Folder
+		2.	create three folders in any location for Full Backup, Incremental backup, and Combined backup
+		3.	Make sure that folders have permissions
+		4.	Open postgresql.conf file which is in data folder and 
+					UN COMMENT, EDIT / ADD
+					wal_level = replica
+					archive_mode =on
+					archive_command = 'copy "%p" "INCREMENTAL_FILE_PATH\\%f " ' 
+					summarize_wal = on 
+					Ex: 'cmd /c copy "%p" "C:\\IncBackup\\%f " '
+		
+		5.	Save the file and close
+		6.	Now take Full Base Backup in full backup folder
+		7.	Take Incremental Backup in incremental folder
+		8.	Now combine both to combined backup folder
+
+Restore:
+		9.	Stop the postgresql service
+		10.	Copy the files from combined folder to main data folder
+		11.	Start the folder
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+1.3. Differential Backup
+
+
+
+
+====================================================================================================
+2. Logical Backup
+
+	2.1. Logical Backup Using PG_DUMP:
+		BACKUP:
+		OPEN CMD NAVIGATE TO POSTGRE SQL BIN FOLDER:	cd C:\Program Files\PostgreSQL\17\bin
+		VERIFY:	pg_dump --version, pswl --version
+
+====================================================================================================
+3. WAL Backup:
+WAL Backup:
+			1.	Open CMD and navigate to POSTGRESQL's BIN Folder
+			2.	create two folders in any location one for Full Backup & another for WAL Files Backup
+				
+				Make sure that folders have permissions
+				
+				UN COMMENT, EDIT / ADD 
+					wal_level = replica
+					archive_mode =on
+					archive_command = 'copy "%p" "WALFILE_PATH\\%f " ' 	Ex: 'cmd /c copy "%p" "C:\\wal\\%f " '
+					save the file and close
+				
+			4.	restart the postgre sql
+						net stop postgresql-x64-17
+						net start postgresql-x64-17
+						
+						pg_ctl -D "C:\Program Files\PostgreSQL\17\data" restart
+		
+			5.	verify the changes mode on the postgresql.conf file was updated in Postgresql GUI Using
+						SHOW wal_level;
+						SHOW archive_mode;
+						SHOW archive_command;
+
+			6.	if archive_command is not updated then try
+					ALTER SYSTEM RESET archive_command;	if archive_command is not updating then this statement will reset it
+					SELECT pg_reload_conf();
+
+			7.	now take Full base Backup 
+					pg_basebackup -U postgres -D "C:\PG_Backup" -Fp -Xs -P -v
+
+			8.	make some changes in database and check the WAL folder, new files will be generated
+					if not generating by default use SELECT pg_switch_wal();
+
+WAL Restore:
+			9.	stop the postgresql service
+
+			10.	locate postgresql DATA folder rename the original DATA folder as DATA_OLD for reference
+
+			11.	copy the Full Backup Folder to replace the DATA folder using xcopy command
+					This command will create a data folder and copies the files from backup folder to data folder
+					xcopy "C:\DBFullBackup" "C:\Program Files\PostgreSQL\17\data" /E /I /H
+
+			12.	in new DATA folder create a file named recovery.signal
+					echo. > "C:\Program Files\PostgreSQL\17\data\recovery.signal"
+
+			13.	ensure all the WAL files in WAL folder
+
+			14.	edit postgresql.conf in new DATA folder and add or modify
+					restore_command = 'cmd /c copy "C:\\wal\\%f" "%p"'
+
+			15.	if Point-In-Time_Recovery was required then add or modify
+					recovery_target_time = '2025-08-04 11:30:00'
+
+			16.	save and close the file
+
+			17.	start the postgresql service
+
+
+after the backup new WAL will be generating in default DATA directory pg_wal folder, not in recently created WAL folder 
+keep the old_data folder fo rollback during validation, delete after confirming success & Backup integrity
+data (new) folder is active database, never delete
+fullbackup folder retain it as recovery snapshot
+wal folder retain all WALs for backup cycles, cleanup old WALs after new base backup
+
+--------------------------------------------------------------------
+COMMANDS:
+
+SHOW config_file;
+
+SHOW wal_level;
+SHOW archive_mode;
+SHOW archive_command;
+
+ALTER SYSTEM RESET archive_command;
+SELECT pg_reload_conf();
+
+SELECT pg_switch_wal();
+
+SHOW data_directory;
+
+SELECT pg_is_in_recovery();
+	true if still recovering
+	false if recovery is complete
+
+-- -------------------------------------------------------------------
+SELECT pg_wal_replay_resume();		resumes the restore process, if it pauses
+
+====================================================================================================
+
+

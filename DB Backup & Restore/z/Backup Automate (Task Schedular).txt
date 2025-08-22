@@ -1,0 +1,10 @@
+TO AUTOMATE THE FULLBACKUP PROCESS ALONG WITH THE TIMESTAMP USING .BAT FILE AND TASK SCHEDULAR
+
+create a .bat file with some random text in it, as it will not be created empty using CMD, as it is not possible to create directly in C drive
+	- echo abdsd > backup.bat
+
+now write the CMD script to extract date, time and pg_basebackup command in it
+
+we can run it direct by its file name in CMD where the file is located or we can double click it to open
+	C:\>backup.bat
+	here .bat file is in C drive

@@ -1,0 +1,73 @@
+1. BACKUP
+	
+	1.1 PHYSICAL BACKUP
+		1.1.1 FULL BACKUP
+		1.1.2 INCREMENTAL BACKUP
+		1.1.3 DIFFERENTIAL / CUMULATIVE BACKUP
+		
+		1.1.4 NETWORK BACKUP
+		1.1.5 TRANSACTION LOG BACKUP
+	
+	1.2 LOGICAL BACKUP
+	1.3 SNAPSHOT BACKUP
+
+BACKUP METHODS
+	NAIVE TOOLS
+	GUI TOOLS
+	SCHEDULE JOBS
+
+PG_DUMP
+PG_DUMPALL
+
+PG_RESTORE
+PSQL
+
+BACKUP COMPONENTS
+	DATA FILES
+	TRANSACTION LOGS
+	SCHEMA . STRUCTURE
+
+BACKUP DEVICES
+	CD / DVD
+	USB STICK
+	USB DRIVE
+	SSD
+	NAS
+
+DATA RECOVERY
+
+
+ESSENTIAL TEMINALOGY
+	RECOVERY TIME 	 OBJECT (RTO)
+	RECOVERY POINT OBJECT (RPO)
+	HOT / ONLINE BACKUP
+	COOL / OFFLINE BACKUP
+
+FAULT TOLERANCE
+DISASTER RECOVERY
+POINT IN TIME RECOVERY (PITR)
+WAL ARCHIVING
+
+
+===========================================================
+1. VERBOSE OUTPUT
+2. 2>&1
+3. CLUSTER
+
+
+WAL archiving (continuous archiving):
+•	High-availability, point-in-time recovery (PITR)
+•	Minimizes data loss, supports replication
+•	Complex setup, require more storage
+
+
+PHYSICAL BACKUP
+
+Full Backup
+in data folder postgresql.conf un comment and modify 
+	archive_mode = on, 
+	archive_command = cmd /c copy "%p" "wal_folder_path\\%f"'
+
+?
+in data folder postgresql.conf un comment and modify 
+	summarize_wal = on

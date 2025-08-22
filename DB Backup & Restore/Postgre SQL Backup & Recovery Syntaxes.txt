@@ -1,0 +1,273 @@
+1. PHYSICAL BACKUPS
+		1.1 FULL BACKUP
+		1.2 INCREMENTAL BACKUP
+		1.3 DIFFERENTIAL BACKUP
+
+2. LOGICAL BACKUP
+		2.1 PG_DUMP
+		2.2 PG_DUMPALL
+		
+		RESTORE: 	psql 			- for plain pg_dump, pg_dumpall
+							pg_restore 	- for pg_dump custom or tar or directory format, parallee jobs
+
+3. WAL BACKUP
+
+============================================================================================================
+1. PHYSICAL BACKUP
+
+	1.1) FULL BACKUP: USING PG_BASEBACKUP
+				SYNTAX:
+
+					BACKUP:
+					pg_basebackup [options]
+
+					Options:
+							-U user name
+							-h database server host
+							-p database server port
+							-D Target directory for backup 	- where the backup will be saved (folder must be empty), if no folder in the given path new folder will be created automatically
+							-F			- backup format (c / p / t)
+							-Fp 		- plain format output
+							-Ft 		- tar format output
+							-z 		- Compresses the output data during backup
+							-X method			- how to handle WAL files (s / f / n)
+							[-X stream / Xs]	- stream WAL files during backup, include WAL files for immediate recovery
+							[-X fetch / Xf]		- fetch WAL files after backup
+							-Xn						- none
+							-P show progress (display the backup progress, here `P` is uppercase)
+							-v verbose output
+							
+							-v / -P > 	- output redirection operator in shell / bash, redirects the standard output (stdout) of the command to a file
+							log_file_path	- destination file where the output is saved
+							2		-  refers to standard error (stderr), which is where error messages go
+							1		- refers to standard output (stdout), which is where the normal output goes.
+							>&	- means to redirect
+							2>&1 means: redirect standard error (2) to the same place as standard output (1).
+							
+					Ex: 
+					pg_basebackup -U postgres -D "C:\DB_Backup" -F p -X stream -P -v
+					pg_basebackup -U kjs -D "C:\DataBackupnew"-Fp -P
+					
+					pg_basebackup -h localhost -U postgres -D $BACKUP_PATH -Fp -Xs -v -P > $LOG_FILE 2>&1
+
+
+			RESTORE: stop the SQL server , make the new folder as data folder (rename / delete), start the server
+
+
+	1.2) INCREMENTAL BACKUP: USING PG_BASEBACKUP
+			Syntax:
+		
+			BACKUP:
+			
+					FULL BACKUP:
+						Syntax: pg_basebackup [options]
+
+					INCREMENTAL BACKUP:
+						Synatx: pg_basebackup --incremental= "base_backup_manifest file path on base backed up folder\backup_manifest" -D incremental_folder_path
+					
+						Ex: 	pg_basebackup --incremental="C:\DBFullBackup\backup_manifest" -D "C:\BDIncBackup" -U kjs
+								pg_basebackup --incremental="C:\DataBackupnew" -D "C:\DBbackup_inc" -v -P -U kjs					
+					
+						psql -U postgres -c "SELECT pg_switch_wal();"	-- modifying the database after full backup and using this will generate incremental file in folder
+					
+					COMBINING BOTH FULLBACKUP & INCREMENTAL BACKUP:
+						Syntax: pg_combinebackup “full_backup folder path” “incremental_backup folder path”  -o “combined_backup folder path”
+					
+						Ex: C:\Program Files\PostgreSQL\17\bin>pg_combinebackup "C:\DBFullBackup" "C:\BDIncBackup" -o "C:\DBCombinedBackup"
+
+
+			RESTORE: RESTORE THE COMBINED BACKUP:
+							SYNTAX:
+								xcopy
+											/E - Copies all subdirectories, including empty ones.
+											
+											/I - If the destination does not exist and you are copying multiple files or directories, 
+												this option tells xcopy to assume the destination is a directory (not a file), 
+												so it automatically proceeds without asking you to specify
+												
+											/Y - Suppresses prompts to confirm overwriting existing files in the destination. 
+													By default, xcopy will ask if you want to overwrite files; /Y makes it overwrite them without asking
+											
+											source_backed_up_file_path
+											restore_path
+
+					Ex: xcopy /E /I /Y "C:\DB_Backup" "C:\DataBackupnew"
+
+
+	1.3) DIFFERENTIAL BACKUP:
+			Syntax:
+		
+			BACKUP:
+			
+					FULL BACKUP:
+						Syntax: pg_basebackup [options]
+
+					DIFFERENTIAL BACKUP:
+					Synatx: pg_basebackup --incremental= "base_backup_manifest file path on base backed up folder\backup_manifest"  --pgdata=incremental_folder_path -U -X *
+					
+						Ex: 	pg_basebackup --incremental="C:\\DBFullBackup\\backup_manifest" --pgdata="C:\\DBDiffBackup" -U kjs -Xf *
+					
+					COMBINING BOTH FULLBACKUP & DIFFERENTIAL BACKUP:
+						Syntax: pg_combinebackup “full_backup folder path” “incremental_backup folder path”  -o “combined_backup folder path”
+
+
+			RESTORE:  stop the SQL server , make the new folder as data folder (rename / delete), start the server
+
+============================================================================================================
+2) LOGICAL BACKUP
+
+	2.1 PG_DUMP
+
+			SYNTAX:
+					BACKUP: 
+						pg_dump [options]
+
+								OPTIONS:
+										-U 	Username / Server name
+										-h		Source database server IP/hostname
+										-d		Database name									- name of the database to dump
+										
+										-n	<schema_name>									- dump specified schema (schema & data)
+										[-n <schema_name> --schema-only / -s]	- Schema only (NO Data)
+										[-n <schema_name> --data-only / -a]			- data only (NO Schema)
+										
+										[-n <schema_name>  -T <schema_name.table_name>] 	-doesnot include the table names in the backup file
+																																	(if multiple tables -T schema.table_name -T schema.table_name) (here `T` is uppercase)
+										-t						dump specified table (here `t` is lower case)
+										-f						dump file path with file name - "C:\dump.sql"
+										-Fp					dump in plain text SQL script
+										-Ft					dump in tar format
+										-Fc					dump in compressed
+										-Fd					dump in directory format
+										-f"file_path"		dump file path and file name, file will be generated if it does not exists with the same name in the folder
+										-j njobs	
+										[-B, --no-blobs]	excludes large objects
+										-v							verbose option
+
+							Ex:
+								Database Backup:
+								pg_dump -U postgres -h localhost -p 5432 -d practice -f "C:\kjs_backup.sql"
+
+					RESTORE:
+									psql -U destination_username -h destination_host -d destination_database_name -f dump_file_name
+
+														OPTIONS:
+															-h	Destination server IP/hostname
+															-U PostgreSQL username
+															-d	Target database (must exist)
+															--schema-only	Only restore structure (no data)
+															--data-only	Only restore data (no schema)
+						
+								Ex: 	psql -U kjs -h localhost -d kjs -f "C:\DB_Backup\db_backup_overwrite.sql"
+							
+
+							Force Overwrite Existing Schema (--clean) - Warning: This drops and recreates the schema. Use with caution!
+								
+								SYNTAX: pg_restore --clean -h host -U username -d databasename backupfile_name
+								Ex: pg_restore --clean -h dest_host -U admin -d erp_staging inventory_backup.dump
+
+	2.2 PG_DUMPALL:
+			SYNTAX:
+								BACKUP: 
+									pg_dumpall [options]
+
+											OPTIONS:
+												-U 			username
+												-h				hostname
+												-p				port
+												-a				data only (NO Schema)
+												-s				schema only (NO Data)
+												-f 				dump file path with file name - "C:\dump.sql"
+												-g 			dumps global objects like roles & tablespaces only - not databases
+												-t				dumps tablespaces only
+												-r 				dumps only roles
+												-c				includes SQL commands to clean (drop) existing objects before recreating
+												-O 			skip restoration of objective ownership
+												-x				do not dump privileges
+												-v 			verbose, show detailed progress output
+												--exclude-database		exclude DB whose name match with given pattern
+												
+							RESTORE:
+										psql -U <username> -f "backedup_dumpall_file_path_with_name"
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+USING GUI	
+
+			BACKUP:
+
+					Step 1:
+						Right-click your Data Base / Schema / Table
+						Select Backup..
+
+					Step 2: Configure Backup Options
+						Filename: Enter path (e.g., C:\Backups\erp_prod_20240615.backup)
+						Format: Select Custom (compressed) or Plain (SQL)
+						Encoding: UTF-8 (default)
+						Role name: postgres (or your admin user)
+
+					Step 3: Select Objects (Optional)
+						Under Objects tab, choose specific schemas/tables
+						For your ERP, select:
+						kjs schema (with 33 tables)
+						public schema (if used)
+
+					Step 4: Execute Backup
+						Click Backup button
+						Monitor progress in the Messages panel
+						Verify file appears at your specified location
+
+			RESTORE:
+
+					Step 1: Create Empty Data Base / Schema / Table (If Needed)
+						Right-click On Databases > Create > Database
+
+					Step 2: Execute Restore
+						Right-click Data Base > **Restore...`
+						Select your backup file
+						Enable Clean before restore if replacing existing data
+						Click Restore
+
+========================================================================================================
+3. WAL BACKUP
+
+		SYNTAX:
+			BACKUP:
+			
+					FULL BACKUP:
+						Syntax: pg_basebackup [options]
+
+
+					WAL BACKUP: no need to run any commands, just modify the conf file
+												wal_level = replica
+												archive_mode =on
+												archive_command = 'copy "%p" "WALFILE_PATH\\%f " ' 	Ex: cmd /c copy "%p" "C:\\wal\\%f " '
+										
+										VERIFY THEM USING 
+												SHOW wal_level;
+												SHOW archive_mode;
+												SHOW archive_command;
+											
+										to copy backed Up data files to DATA folder
+												xcopy "C:\DBFullBackup" "C:\Program Files\PostgreSQL\17\data" /E /I /H
+
+			RESTORE:
+
+
+========================================================================================================
+
+RESTORE:
+
+	pg_restore [Options]
+	
+	OPTIONS:
+		-F c/d/t			backup file format
+		-d 				connect to a specified DB
+		-a					restores data only (NO Schema)
+		-s					restores schema only (NO Data)
+		-n name		restores specified schema
+		-N name		do not restore objects in this schema
+		-t name		restore only specified table
+		-verbose		verbse ouput
+
+		

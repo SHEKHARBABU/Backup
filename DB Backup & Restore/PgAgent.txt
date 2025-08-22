@@ -1,0 +1,46 @@
+PgAgent Schedule Process Steps:
+
+1. the database should be postgres (as it was regisetred while installing)
+2. after installing & registreing service you can see pgagent in Pgadmin
+3. right click on it -> create -> PgAgent Job
+4. in general tab under name enter job name
+5.  host agent 							----
+6. under steps tab 
+			in general tab
+				create a new step with step name
+				kind SQL if code is SQL based OR Batch if code in CMD
+				connection type local OR Remote
+				select DB Postgres *
+				connection string 		---- if remote
+		in code tab
+				enter the code
+7. under the schedule tab
+		create a new schedule with name
+		schedule it
+
+8. save
+------------------------------------------
+pg_basebackup code: "C:\Program Files\PostgreSQL\17\bin\pg_basebackup.exe" -U kjs -D "C:\full_backup.sql" -Fp  -v
+
+bat file code: "C:\kjs_backup.bat"
+
+
+========================================================
+PgAgent installation steps
+
+	1. using StackBuilder:
+
+
+
+========================================================
+SELECT * FROM pgagent.pga_job;
+-- Job run history (shows when your job was run, and status)
+SELECT * FROM pgagent.pga_joblog ORDER BY jlgid DESC LIMIT 10;
+
+-- Step-specific history for your job
+SELECT * FROM pgagent.pga_steplog ORDER BY splid DESC LIMIT 10;
+
+SELECT * FROM pg_catalog.pg_extension WHERE extname = 'pgagent';
+
+create language plpgsql;
+CREATE EXTENSION pgagent;

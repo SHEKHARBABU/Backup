@@ -1,0 +1,74 @@
+docs for
+1. making an istance in AWS
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2. accessing instance from CMD
+
+for connecting to the server from cmd, use public IPv4 address under networking for connection IP
+in cmd:
+	Syntax: 	ssh -i "path of the .pem file with file name and extension" instance_username@public IPv4 address
+	EX: 	ssh -i "C:\Users\Y Y S SHEKHAR BABU\OneDrive\Desktop\sql_server.pem" ec2-user@13.62.56.231
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+3. installing postgresql in nstance
+
+		When PostgreSQL is installed, it creates a Linux user named postgres to run the database server process and manage data files.
+		the postgres user exists at two levels:
+				Linux user account for OS-level permissions and process ownership.
+				PostgreSQL superuser role for database management and access control inside PostgreSQL.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+4. backup process
+
+		
+		pg_basebackup -h 127.0.0.1 -D /home/ec2-user/pg_backup -F p -P -U postgres
+		
+			The backup is performed locally on the server where PostgreSQL is installed. 
+			The IP 127.0.0.1 is always reserved for local network communications, meaning you are connecting to PostgreSQL directly, 
+			within the same server instance. we can use localhost also
+
+
+		add pgpass file:
+			in postgres user login
+				vi .pgpass
+				add line
+				:wq save 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+5. restore process
+
+	Login to server
+	1. Stop PostgreSQL server
+		sudo systemctl stop postgresql-17
+
+	2. switching to the postgres user
+		sudo -i -u postgres
+
+	3. renam the data directory 
+		mv /var/lib/pgsql/17/data /var/lib/pgsql/17/data_old
+		
+	4. make a new data directory 
+		mkdir /var/lib/pgsql/17/data
+		
+	5. extraction
+			1. If your backup is a tar file, extract it
+					tar -xzf /home/ec2-user/pg_backup/base.tar.gz -C /var/lib/pgsql/17/data
+				
+			2. if backup file is plain, copy them
+					cp -r /home/ec2-user/pg_backup/* /var/lib/pgsql/17/data/
+
+	6. start the postgresql server
+			sudo systemctl start postgresql-17
+
+	while copying if postgres user has limited permissions
+	
+		1. Exit from postgres user back to ec2-user
+				exit
+		
+		2. then copy the backup files to the PostgreSQL data directory using sudo
+				sudo cp -r /home/ec2-user/pg_backup/* /var/lib/pgsql/17/data/
+
+		3. After that, change ownership back to postgres
+				sudo chown -R postgres:postgres /var/lib/pgsql/17/data
+				sudo chmod 700 /var/lib/pgsql/17/data
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
