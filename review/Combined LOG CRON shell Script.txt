@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Folder Paths
+BACKUP_FILES_FOLDER_PATH="/var/lib/pgsql/pg_backups"
+BACKUP_LOGS_FOLDER_PATH="/var/lib/pgsql/pg_backup_logs"
+
+# Timestamp for backup and logs
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+
+# Backup target directory
+BACKUP_FILE="$BACKUP_FILES_FOLDER_PATH/Full_Backup_$TIMESTAMP"
+
+# Log file path for backup and email content
+BACKUP_LOG_FILE="$BACKUP_LOGS_FOLDER_PATH/Backup_Report_$TIMESTAMP.log"
+
+# Email recipient and subject
+EMAIL_TO="yshekharbabu7@gmail.com"
+EMAIL_SUBJECT="PostgreSQL Backup Report - $TIMESTAMP"
+
+{
+  echo "==============================================="
+  echo "Backup Job Started At: $(date)"
+  echo "Backup Location: $BACKUP_FILE"
+  echo "-----------------------------------------------"
+
+  # Run PostgreSQL base backup
+  pg_basebackup -U postgres -h localhost -p 5432 -D "$BACKUP_FILE" -Fp -Xs -v -P
+
+  BACKUP_EXIT_CODE=$?
+
+  echo "-----------------------------------------------"
+  if [ $BACKUP_EXIT_CODE -eq 0 ]; then
+      echo "✅ Backup Completed Successfully At: $(date)"
+  else
+      echo "❌ Backup Failed At: $(date)"
+      echo "Exit Code: $BACKUP_EXIT_CODE"
+  fi
+  echo "==============================================="
+  echo ""
+} >> "$BACKUP_LOG_FILE" 2>&1
+
+# Use full path for msmtp if needed, e.g., /usr/local/bin/msmtp
+msmtp "$EMAIL_TO" <<EOF
+From: yshekharbabu7@gmail.com
+To: $EMAIL_TO
+Subject: $EMAIL_SUBJECT
+
+$(cat "$BACKUP_LOG_FILE")
+
+EOF

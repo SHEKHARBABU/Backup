@@ -1,0 +1,47 @@
+# Global default settings (apply to all accounts unless overridden)
+defaults
+auth           on                             # Turn on SMTP authentication
+tls            on                             # Use TLS encryption
+tls_trust_file /etc/pki/tls/certs/ca-bundle.crt   # Path to trusted CA certificates for TLS
+logfile        /var/log/msmtp.log             # Log file to record msmtp activity and errors
+
+# Account definition with Gmail SMTP server details
+account        gmail
+host           smtp.gmail.com                  # Gmail SMTP server
+port           587                            # TLS port (STARTTLS)
+from           yyssb777@gmail.com           # Your email address (sender)
+user           yyssb777@gmail.com           # Username for SMTP login (usually your email)
+password     pcmj buaq rbaa ocak               # App password (not your Gmail account password)
+
+# Set default account to use
+account default : gmail
+
+-----------
+
+-- working
+# Global defaults
+defaults
+auth on
+tls on
+tls_trust_file /etc/pki/tls/certs/ca-bundle.crt
+logfile ~/.msmtp.log
+
+# Gmail SMTP account
+account gmail
+host smtp.gmail.com
+port 587
+from yyssb777@gmail.com
+user yyssb777@gmail.com
+password pcmj buaq rbaa ocak
+
+account default : gmail
+-------------------------------------------------------
+
+MSMTP
+/usr/local/src/msmtp-1.8.16
+
+
+PERMISSIONS FOR MSMTP
+[ec2-user@ip-172-31-16-206 msmtp-1.8.16]$ sudo cp ~/.msmtprc /var/lib/pgsql/.msmtprc
+[ec2-user@ip-172-31-16-206 msmtp-1.8.16]$ sudo chown postgres:postgres /var/lib/pgsql/.msmtprc
+[ec2-user@ip-172-31-16-206 msmtp-1.8.16]$ sudo chmod 600 /var/lib/pgsql/.msmtprc

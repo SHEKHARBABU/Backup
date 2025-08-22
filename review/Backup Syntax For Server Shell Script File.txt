@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Folder Path Where The Backups Will Store
+BACKUP_FILES_FOLDER_PATH="/var/lib/pgsql/pg_backups"
+
+# Folder Path Where Log Files Of Backups Will Store
+BACKUP_LOGS_FOLDER_PATH="/var/lib/pgsql/pg_backup_logs"
+
+
+
+# Timestamp To Use In Folder Name While Saving
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+
+# Backup File Path
+BACKUP_FILE="$BACKUP_FILES_FOLDER_PATH/Full_Backup_$TIMESTAMP"
+
+# Backup Log File Path
+LOG_FILE="$BACKUP_LOGS_FOLDER_PATH/Full_Backup_Log_$TIMESTAMP.log"
+
+mkdir -p $BACKUP_FILES_FOLDER_PATH
+mkdir -p $BACKUP_LOGS_FOLDER_PATH
+
+# Backup Command
+pg_basebackup -U postgres -h localhost -p 5432 -D $BACKUP_FILE -Fp -Xs -v -P > $LOG_FILE 2>&1

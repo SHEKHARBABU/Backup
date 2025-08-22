@@ -1,0 +1,244 @@
+DOCS FOR
+
+1. Making An Istance In AWS
+
+	1. login to AWS
+	2. click on launch instances
+	3. enter instance name
+	4. Amazon Machine Image will be Amazon Linux
+	5. under key pair (login)
+		create a new key pair 
+			entera key pair name type (RSA) and format (.pem)
+			
+	6. it will be downloaded automatically. preserve itcarefully for log in to server each time
+	7. under network settings
+			enable Allow SSH traffic from my IP
+			
+	8. under configure storege
+			select GB
+	9. click on launch instance
+
+	10. instance sucessfully created
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2. Accessing Instance From CMD
+
+	for connecting to the server from cmd, use public IPv4 address under networking for connection IP
+	
+	In CMD:
+		Syntax: 	ssh -i "path of the .pem file with file name and extension" instance_username@public IPv4 address
+		EX: 			ssh -i "C:\Users\Y Y S SHEKHAR BABU\OneDrive\Desktop\sql_server.pem" ec2-user@13.62.56.231
+
+	after logging into the server, the path will be /home/ec2-user
+	
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+3. Installing Postgresql In Instance (Amazon Linux)
+
+		1. after logging into the instance, swith to root user
+				sudo su -
+				
+		2. update system packages **
+				sudo dnf update -y
+		
+		3. install postgresql 17
+				sudo dnf install -y postgresql17-server postgresql17
+
+		4. switch to postgres user
+				sudo su - postgres
+		
+		5. initialize the postgresql database 
+				initdb -D /var/lib/pgsql/data
+				
+				to find the initdb version: initdb --version
+				
+		6. exit from postgres user (root / ec2)
+		
+		7. start the service
+				sudo systemctl start postgresql
+				sudo systemctl enable postgresql
+				sudo systemctl status postgresql
+
+		8. check the postgesql version
+				psql --version
+				
+		9. set password for postgres user
+				switch from server to postgrsql
+					sudo -u postgres psql
+				
+				enter the command
+						ALTER USER postgres WITH PASSWORD 'YourSecurePassword';
+						\q
+
+		10. postgresql was successfully installed with user postgres with password
+		
+		
+		When PostgreSQL is installed, it creates a Linux user named postgres to run the database server process and manage data files.
+		the postgres user exists at two levels:
+				Linux user account for OS-level permissions and process ownership.
+				PostgreSQL superuser role for database management and access control inside PostgreSQL.
+
+		using this sudo -i -u postgres we will switch from ec2-user to postgres user in instance level and postgres is also a postgresql superuser
+
+
+		TIMECORRECTION
+		date -  display time format
+		timedatectl	- details of the time
+		timedatectl list-timezones		- lists all the timezones
+		sudo timedatectl set-timezone Region/City		- to change to thsi timezone  EX: sudo timedatectl set-timezone Asia/Kolkata
+		
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Accessing Server's Postgresql through Local Machine's Pgadmin
+
+	1. login to the instance
+	
+	2. switch to postgres user
+			sudo -i -u postgres
+			
+	3. after switching to postgresql the path will be /var/lib/pgsql
+	
+	4. edit postgresql.conf file to listen all addresses
+			under CONNECTIONS AND AUTHENTICATIONS
+				uncomment and change listen_addresses to '*'
+
+	5. edit pg_hba.conf file and add a line
+				host all all ip md5
+				host 	all 	all 	IP 	md5
+				
+				 which IP addresses are allowed to connect to your PostgreSQL server and what authentication method they must use.
+
+	6. restart the postgresql
+	
+	7. add inbound rule in the server
+			
+			in instance under security under inbounds click on security group again click on security group id
+			click on edit inbound rules
+			click on add rule
+			type: postgresql
+			protocol: TCP
+			port range: 5432
+			source: my ip
+	
+		you can get MY IP from here EX: 183.82.2.109/32
+		
+	8. click on ok
+
+	9. in pgadmin create a new server 
+			IP: server's public IPv4 address
+	
+	10. sucessfully connected
+	
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+4. Backup Process
+
+	1. create a .sh file with folders creation and pg_basebackup command, we will past it in the server
+	
+	2. log in to the server and switch to postgres user
+			sudo -i -u postgres
+	
+	3. navigate to /var/lib/pgsql
+			create a .sh file with predefined code in it
+			
+	4. if code doesnot include backup, backup_log folders create it in same location and assign required permissions
+				
+				Folder Creation:
+					mkdir -p /var/lib/pgsql/backup_folder_name
+					mkdir -p /vat/lib/pgsql/backup_log_file_name
+				
+				Permission Assigning:
+					sudo chown -R postgres:postgres /var/lib/pgsql/backup_folder_name
+					sudo chown -R postgres:postgres /var/lib/pgsql/backup_log_file_name
+					sudo chmod 700 /var/lib/pgsql/backup_folder_name
+					sudo chmod 700 /var/lib/pgsql/backup_log_file_name
+
+	5. edit pg_hba.conf file which in postgresql DATA folder (/var/lib/pgsql/17/data) and add a new line 
+			host		replication 	postgres		127.0.0.1/32		md5
+		
+			to view and modify hba file 		- sudo vi /var/lib/pgsql/17/data/pg_hba.conf
+
+	6. create a file named .pgpass in /var/lib/pgsql and add a line and assign permissions to it
+			
+			add the line wih these fields: 
+				localhost:5432:*:postgres:password
+
+			permission for .pgpass file : 
+				chmod 600 /var/lib/pgsql/.pgpass
+
+	7. navigate to the .sh folder location (/varlib/pgsql), manually run the .sh file 
+			./filename.sh
+
+	8. verify the backup and logs folder. if everything working good
+
+	9. create a cronjob for daily backups
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+5. RESTORE PROCESS
+
+ONLY COPY THE FILES FROM THE BACKUP FOLDER OR MAKE A COPY OF THE BACKUP FOLDER FOR REFERENCE
+
+	Login to server
+	1. logout from postgres user and run as server user(EC2), Stop PostgreSQL server 
+		sudo systemctl stop postgresql-17
+
+	2. switching to the postgres user
+		sudo -i -u postgres
+
+	3. renam the data directory 
+		mv /var/lib/pgsql/17/data /var/lib/pgsql/17/data_old
+		
+		the old data folder will also be available
+		
+	4. make a new data directory
+		mkdir /var/lib/pgsql/17/data
+
+		sudo chown -R postgres:postgres /var/lib/pgsql/17/data
+		sudo chmod 700 /var/lib/pgsql/17/data
+
+	5. extraction
+			1. If your backup is a tar file, extract it
+					tar -xzf /home/ec2-user/pg_backup/base.tar.gz -C /var/lib/pgsql/17/data
+				
+			2. if backup file is plain, copy them
+					cp -r /home/ec2-user/pg_backup/* /var/lib/pgsql/17/data/
+					
+					it will copy the files only, after the copy also we can have the files in it
+
+	6. start the postgresql server
+			sudo systemctl start postgresql-17
+
+	while copying if postgres user has limited permissions
+	
+		1. Exit from postgres user back to ec2-user
+				exit
+		
+		2. then copy the backup files to the PostgreSQL data directory using sudo
+				sudo cp -r /home/ec2-user/pg_backup/* /var/lib/pgsql/17/data/
+
+		3. After that, change ownership back to postgres
+				sudo chown -R postgres:postgres /var/lib/pgsql/17/data
+				sudo chmod 700 /var/lib/pgsql/17/data
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+cron creation
+
+1. switch to postgres user
+
+2. open cron tab editor
+		crontab -e
+
+3. add cron job entry 
+		*****
+		0 2 * * * /var/lib/pgsql/pg_backup.sh
+		
+		1st * - minute (0th minute)
+		2nd *  - hour (2 AM)
+		3rd * - day of the month (every day)
+		4th * - month (every month)
+		5th * - day of the week (every day)
+
+4. save and exit (:wq)
+5. to see list of cron jobs
+		crontab -l
+
+
+To catch any output or errors from the cron job, modify the cron line to log to a file:
+0 2 * * * /var/lib/pgsql/pg_backup.sh >> /var/lib/pgsql/backup_logs/cron_backup.log 2>&1
