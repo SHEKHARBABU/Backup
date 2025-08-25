@@ -1,0 +1,22 @@
+PgAgent
+dump in cloud
+
+================================================================
+DOUBTS
+
+how to maintain backups
+how long period data backup needed (retention period)
+how old period data should be display in application
+restore tests?
+backup protection & encryption
+
+can i restore multiple full backups as a single, like last 6 moths 6 fullbackups can i restore all those at a time?
+
+---------------------------------------------------------------------------
+WAL and differential backups do not need to be stored for 3 years; only the full backups need long-term archival.
+No need to store differential/WAL backups beyond short-term period; only periodic full backups are needed for long-term archival.
+
+
+ if we create a database or schema in a server it will create in all the servers with same connection irrespective of server names and user names.
+ server names and usernames in the client tool are just connection profiles, not distinct physical or independent servers. Objects like databases or schemas exist at the server (instance) level, so they appear across all connections to that instance.
+ 

@@ -1,0 +1,61 @@
+#!/bin/bash
+
+BACKUP_FOLDER="/var/lib/pgsql/pg_backups"
+LOG_FOLDER="/var/lib/pgsql/pg_backup_logs"
+BUCKET="ec2-cloud-bucket-1"
+LOGFILE="/var/lib/pgsql/upload_status.log"
+EMAIL_TO="yshekharbabu7@gmail.com"
+EMAIL_SUBJECT="S3 Upload Status Report - $(date +"%Y-%m-%d")"
+MSMTP_PATH="/usr/local/bin/msmtp"
+
+DAYS_AGO=2
+
+> "$LOGFILE"
+
+UPLOAD_TIMESTAMP="BACKUP_LOG_UPLOAD_$(date +"%Y%m%d_%H%M%S")"
+TARGET_DATE=$(date -d "$DAYS_AGO days ago" +%Y%m%d)
+
+echo "Starting upload script at $(date)" >> "$LOGFILE"
+echo "Uploading to S3: $UPLOAD_TIMESTAMP, searching for date: $TARGET_DATE" >> "$LOGFILE"
+
+# Upload backup folders for the target day
+for dir in "$BACKUP_FOLDER"/Full_Backup_"${TARGET_DATE}"_*; do
+  if [ -d "$dir" ]; then
+    S3_DEST="s3://$BUCKET/$UPLOAD_TIMESTAMP/$(basename "$dir")/"
+    echo "Uploading backup directory $dir to $S3_DEST" >> "$LOGFILE"
+    aws s3 cp --recursive "$dir" "$S3_DEST" 2>> "$LOGFILE"
+    if [ $? -eq 0 ]; then
+      echo "Backup directory $dir uploaded successfully." >> "$LOGFILE"
+     # rm -rf "$dir"
+      echo "Backup directory $dir deleted from server." >> "$LOGFILE"
+    else
+      echo "Backup directory $dir upload failed." >> "$LOGFILE"
+    fi
+  fi
+done
+
+# Upload backup log files for the target day
+for log in "$LOG_FOLDER"/Full_Backup_Report_"${TARGET_DATE}"_*.log; do
+  if [ -f "$log" ]; then
+    S3_DEST="s3://$BUCKET/$UPLOAD_TIMESTAMP/$(basename "$log")"
+    echo "Uploading log file $log to $S3_DEST" >> "$LOGFILE"
+    aws s3 cp "$log" "$S3_DEST" 2>> "$LOGFILE"
+    if [ $? -eq 0 ]; then
+      echo "Log file $log uploaded successfully." >> "$LOGFILE"
+   #   rm -f "$log"
+      echo "Log file $log deleted from server." >> "$LOGFILE"
+    else
+      echo "Log file $log upload failed." >> "$LOGFILE"
+    fi
+  fi
+done
+
+# Send log email
+$MSMTP_PATH "$EMAIL_TO" <<EOF
+From: yshekharbabu7@gmail.com
+To: $EMAIL_TO
+Subject: $EMAIL_SUBJECT
+
+$(cat "$LOGFILE")
+
+EOF

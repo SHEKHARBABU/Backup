@@ -1,0 +1,433 @@
+PROCESSES FOR
+
+1. Making An Instance In AWS
+
+			1. login to AWS
+			2. click on launch instances
+			3. enter instance name
+			4. Amazon Machine Image will be Amazon Linux
+			5. under key pair (login)
+				create a new key pair 
+					entera key pair name type (RSA) and format (.pem)
+					
+			6. it will be downloaded automatically. preserve itcarefully for log in to server each time
+			7. under network settings
+					enable Allow SSH traffic from my IP
+					
+			8. under configure storege
+					select GB
+			9. click on launch instance
+
+			10. instance sucessfully created
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2. Accessing Instance From CMD
+
+			for connecting to the server from cmd, use public IPv4 address under networking for connection IP
+			
+			In CMD:
+				Syntax: 	ssh -v -i "path of the .pem file with file name and extension" instance_username@public IPv4 address
+				EX: 			ssh -v -i "C:\Users\Y Y S SHEKHAR BABU\OneDrive\Desktop\sql_server.pem" ec2-user@13.62.56.231
+
+			after logging into the server, the path will be /home/ec2-user
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+3. Installing Postgresql In Instance (Amazon Linux)
+
+			1. after logging into the instance, swith to root user
+					sudo su -
+					
+			2. update system packages **
+					sudo dnf update -y
+			
+			3. install postgresql 17
+					sudo dnf install -y postgresql17-server postgresql17
+
+			4. switch to postgres user
+					sudo su - postgres
+			
+			5. initialize the postgresql database 
+					initdb -D /var/lib/pgsql/data
+					
+					to find the initdb version: initdb --version
+					
+			6. exit from postgres user (root / ec2)
+			
+			7. start the service
+					sudo systemctl start postgresql
+					sudo systemctl enable postgresql
+					sudo systemctl status postgresql
+
+			8. check the postgesql version
+					psql --version
+					
+			9. set password for postgres user
+					switch from server to postgrsql
+						sudo -u postgres psql
+					
+					enter the command
+							ALTER USER postgres WITH PASSWORD 'YourSecurePassword';
+							\q
+
+			10. postgresql was successfully installed with user postgres with password
+			
+			
+			When PostgreSQL is installed, it creates a Linux user named postgres to run the database server process and manage data files.
+			the postgres user exists at two levels:
+					Linux user account for OS-level permissions and process ownership.
+					PostgreSQL superuser role for database management and access control inside PostgreSQL.
+
+			using this sudo -i -u postgres we will switch from ec2-user to postgres user in instance level and postgres is also a postgresql superuser
+
+
+			TIMECORRECTION
+			date -  display time format
+			timedatectl	- details of the time
+			timedatectl list-timezones		- lists all the timezones
+			sudo timedatectl set-timezone Region/City		- to change to thsi timezone  EX: sudo timedatectl set-timezone Asia/Kolkata
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+4. Accessing Server's Postgresql through Local Machine's Pgadmin
+
+			1. login to the instance
+			
+			2. switch to postgres user
+					sudo -i -u postgres
+					
+			3. after switching to postgresql the path will be /var/lib/pgsql
+			
+			4. edit postgresql.conf file to listen all addresses
+					under CONNECTIONS AND AUTHENTICATIONS
+						uncomment and change listen_addresses to '*'
+
+			5. edit pg_hba.conf file and add a line
+						host all all ip md5
+						host 	all 	all 	IP 	md5
+						
+						host 	all	all 	183.82.2.109/32		md5
+						 which IP addresses are allowed to connect to your PostgreSQL server and what authentication method they must use.
+
+			6. restart the postgresql
+			
+			7. add inbound rule in the server
+					
+					in instance under security under inbounds click on security group again click on security group id
+					click on edit inbound rules
+					click on add rule
+					type: postgresql
+					protocol: TCP
+					port range: 5432
+					source: my ip
+
+				you can get MY IP from here EX: 183.82.2.109/32
+
+			8. click on ok
+
+			9. in pgadmin create a new server 
+					IP: server's public IPv4 address
+			
+			10. sucessfully connected
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+5. Backup Process
+
+			1. create a .sh file with folders creation and pg_basebackup command, we will past it in the server
+					chmod +x /var/lib/pgsql/pg_backup.sh
+			
+			2. log in to the server and switch to postgres user
+					sudo -i -u postgres
+			
+			3. navigate to /var/lib/pgsql
+					create a .sh file with predefined code in it
+						vi pg_backup.sh
+					
+			4. if code doesnot include backup, backup_log folders create it in same location and assign required permissions
+						
+						Folder Creation:
+							mkdir -p /var/lib/pgsql/backup_folder_name
+							mkdir -p /vat/lib/pgsql/backup_log_file_name
+						
+						Permission Assigning:
+							sudo chown -R postgres:postgres /var/lib/pgsql/backup_folder_name
+							sudo chown -R postgres:postgres /var/lib/pgsql/backup_log_file_name
+							sudo chmod 700 /var/lib/pgsql/backup_folder_name
+							sudo chmod 700 /var/lib/pgsql/backup_log_file_name
+
+			5. edit pg_hba.conf file which in postgresql DATA folder (/var/lib/pgsql/17/data) and add a new line 
+					host		replication 	postgres		127.0.0.1/32		md5
+				
+					to view and modify hba file 		- sudo vi /var/lib/pgsql/17/data/pg_hba.conf
+
+			6. create a file named .pgpass in /var/lib/pgsql and add a line and assign permissions to it
+					
+					add the line wih these fields: 
+						localhost:5432:*:postgres:password
+
+					permission for .pgpass file : 
+						chmod 600 /var/lib/pgsql/.pgpass
+
+			7. navigate to the .sh folder location (/var/lib/pgsql), manually run the .sh file 
+					./filename.sh
+
+			8. verify the backup and logs folder. if everything working good
+
+			9. create a cronjob for daily backups
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+6. Restore Process
+
+ONLY COPY THE FILES FROM THE BACKUP FOLDER OR MAKE A COPY OF THE BACKUP FOLDER FOR REFERENCE
+
+	Login to server
+			1. logout from postgres user and run as server user(EC2), Stop PostgreSQL server 
+				sudo systemctl stop postgresql-17
+
+			2. switching to the postgres user
+				sudo -i -u postgres
+
+			3. renam the data directory 
+				mv /var/lib/pgsql/17/data /var/lib/pgsql/17/data_old
+				
+				the old data folder will also be available
+				
+			4. make a new data directory
+				mkdir /var/lib/pgsql/17/data
+
+				sudo chown -R postgres:postgres /var/lib/pgsql/17/data
+				sudo chmod 700 /var/lib/pgsql/17/data
+
+			5. extraction
+					1. If your backup is a tar file, extract it
+							tar -xzf /home/ec2-user/pg_backup/base.tar.gz -C /var/lib/pgsql/17/data
+						
+					2. if backup file is plain, copy them
+							cp -r /home/ec2-user/pg_backup/* /var/lib/pgsql/17/data/
+							
+							it will copy the files only, after the copy also we can have the files in it
+
+			6. start the postgresql server
+					sudo systemctl start postgresql-17
+
+			while copying if postgres user has limited permissions
+			
+				1. Exit from postgres user back to ec2-user
+						exit
+				
+				2. then copy the backup files to the PostgreSQL data directory using sudo
+						sudo cp -r /home/ec2-user/pg_backup/* /var/lib/pgsql/17/data/
+
+				3. After that, change ownership back to postgres
+						sudo chown -R postgres:postgres /var/lib/pgsql/17/data
+						sudo chmod 700 /var/lib/pgsql/17/data
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+7. Cron Job Creation
+
+				1. switch to postgres user
+
+				2. open cron tab editor
+						crontab -e
+
+				3. add cron job entry 
+						*****
+						0 2 * * * /var/lib/pgsql/pg_backup.sh
+						
+						1st * - minute (0th minute)
+						2nd *  - hour (2 AM)
+						3rd * - day of the month (every day)
+						4th * - month (every month)
+						5th * - day of the week (every day)
+
+				4. save and exit (:wq)
+				5. to see list of cron jobs
+						crontab -l
+
+To catch any output or errors from the cron job, modify the cron line to log to a file:
+0 2 * * * /var/lib/pgsql/pg_backup.sh >> /var/lib/pgsql/backup_logs/cron_backup.log 2>&1
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Mail Service
+
+		Installing
+		
+					1. Update your system
+							sudo yum update -y
+
+					2. install build tools and dependencies
+							sudo yum groupinstall "Development Tools" -y
+							sudo yum install gcc make automake autoconf libtool \
+								openssl-devel cyrus-sasl-devel gnutls-devel pkgconfig -y
+
+							These packages include the compiler and development libraries needed for msmtp with TLS support
+							
+					3. Download msmtp source
+								cd /usr/local/src
+								sudo curl -LO https://marlam.de/msmtp/releases/msmtp-1.8.16.tar.xz
+								sudo tar -xf msmtp-1.8.16.tar.xz
+								cd msmtp-1.8.16
+
+					4. clean any previous build
+							make clean
+
+					5. Configure msmtp to detect libraries
+							./configure
+							
+							Confirm output shows:
+							TLS support ............ : yes (Library: GnuTLS)
+							
+					6. build and install
+							make
+							sudo make install
+							
+					7. Verify msmtp installation and TLS
+							msmtp --version
+							
+							You should see TLS/SSL library: GnuTLS.
+				
+				
+		Configure Gmail for SMTP access:
+	
+					1. go to gmail account
+					
+					2. enable two-step verification
+					
+					3. go app passwords [https://myaccount.google.com/apppasswords]
+					
+					4. give any app name and click on create
+					
+					5. MUST TAKE A SCREENSHOT OF THE APP PASSWORD (16 - digit)
+		
+		Configure msmtp for Gmail SMTP (Scheduling)
+
+					1. create .MSMTPRC config file in pgsql folder 
+						its an invisible file
+							
+							navigate to this path /var/lib/pgsql
+								run vi .msmtprc
+						
+						add script:
+						
+								# Global defaults
+								defaults
+								auth on				 												# Turn on SMTP authentication
+								tls on																	# Use TLS encryption
+								tls_trust_file /etc/pki/tls/certs/ca-bundle.crt			# Path to trusted CA certificates for TLS
+								logfile ~/.msmtp.log												# Log file to record msmtp activity and errors
+
+								# Gmail SMTP account
+								account gmail														
+								host smtp.gmail.com											# Gmail SMTP server
+								port 587																# TLS port (STARTTLS)
+								from yyssb777@gmail.com									# Your email address (sender) FROM email address
+								user yyssb777@gmail.com									# Username for SMTP login (usually your email)	SMTP APP PASSWORD ENABLED EMAIL
+								password pcmj buaq rbaa ocak							#App password (not your Gmail account password)
+
+								# Set default account to use
+								account default : gmail
+						
+						2. save the file
+						
+						3. assign permissions to that file
+								sudo chown postgres:postgres /var/lib/pgsql/.msmtprc
+								sudo chmod 600 /var/lib/pgsql/.msmtprc
+								
+						4. test with demo mail
+								echo "Test email from msmtp with TLS" | msmtp your-email@gmail.com
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+S3 bucket preparation
+
+	configuring IAM Role & Creating an S3 bucket
+			
+			1. connect to ec2 via SSH
+					ssh -i "your-key.pem" ec2-user@your-ec2-public-ip
+
+			
+			2. configure IAM Role
+			
+					Go to the AWS Management Console. [amazon management console]
+					Navigate to the IAM (Identity & Access Management) service. 
+							under Security, Identity, & Compliance
+							click on all services
+							select IAM
+
+					On the left menu, click Roles.
+					Click Create role.
+					Under Select trusted entity, choose AWS service.
+					For the use case, select EC2 and click Next: Permissions.
+					On the permissions page, search for AmazonS3FullAccess (or choose a more restrictive S3 policy if needed).
+					Select the policy AmazonS3FullAccess (or your preferred policy).
+					Click Next: Tags (optional: add tags).
+					Click Next: Review.
+					Enter a Role name (e.g., EC2_S3_Access_Role).
+					Click Create role
+
+
+			3. attch IAM Role to EC2 Instance
+					Go to the EC2 Dashboard in AWS Console.
+					Click Instances on the left menu.
+					Select the EC2 instance you want to give S3 access to.
+					Click the Actions button → Security → Modify IAM Role.
+					From the IAM Role dropdown, select the newly created role (e.g., EC2_S3_Access_Role).
+					Click Save.
+			
+			3. install & configure AWS CLI
+			
+			4. check if it exists
+					aws --version
+
+			5. if not installed
+					sudo yum install awscli -y
+
+			6. configure CLI (only if NOT using IAM role)
+					aws configure
+
+			7.  Create an S3 Bucket (follow naming convension)
+					aws s3 mb s3://your-bucket-name
+				
+
+	uplaoding backups from server to S3 bucket
+
+			1. To copy a file to S3
+					aws s3 cp /path/to/local/file.txt s3://your-bucket-name/			- to copy files
+
+					aws s3 sync /path/to/local/folder s3://your-bucket-name/		- to sync files
+
+			2.  test using a file
+					echo "hello world" > testfile.txt
+					aws s3 cp testfile.txt s3://your-bucket-name/
+			
+			3. automate using cron
+			
+				create a cron file in /var/lib/pgsql
+				
+				assigne permissions to it
+
+	to get access to view files in s3 bucket: 
+
+			1. Sign in to AWS console
+			2. Navigate to IAM (Identity and Access Management) service
+			3. Find the User, Group, or Role that corresponds to your AWS CLI credentials.
+			4. select user / role
+			5. go to permissions tab
+			6. under permission policies click on add permission
+			7. click on create inline policy
+			8. select policy editor as JSON
+			9. enter policy and save
+	
+	to restore content from S3 bucket to Server
+
+			1. choose the folder to restore by its folder name
+			
+			2. make a folder with that name in server to maintain consistency
+						mkdir -p BACKUP_LOG_UPLOAD_20250825_154617
+					
+			3. use this command to copy uploaded folder from s3 bucket to server 
+						aws s3 cp --recursive s3://bucket/path/to/folder /local/destination/folder/
+						
+						 aws s3 cp --recursive s3://ec2-cloud-bucket-1/BACKUP_LOG_UPLOAD_20250825_154617 /var/lib/pgsql/uploads_require/BACKUP_LOG_UPLOAD_20250825_154617
+						 aws s3 cp --recursive s3://ec2-cloud-bucket-1/BACKUP_LOG_UPLOAD_20250825_154617/ /var/lib/pgsql/uploads_require/BACKUP_LOG_UPLOAD_20250825_154617/	-- working
+						 
+			4. it will copy the files from s3 bucket to server
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

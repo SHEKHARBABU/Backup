@@ -1,0 +1,113 @@
+Mail Service
+
+		Installing
+		
+					1. Update your system
+							sudo yum update -y
+
+					2. install build tools and dependencies
+							sudo yum groupinstall "Development Tools" -y
+							sudo yum install gcc make automake autoconf libtool \
+								openssl-devel cyrus-sasl-devel gnutls-devel pkgconfig -y
+
+							These packages include the compiler and development libraries needed for msmtp with TLS support
+							
+					3. Download msmtp source
+								cd /usr/local/src
+								sudo curl -LO https://marlam.de/msmtp/releases/msmtp-1.8.16.tar.xz
+								sudo tar -xf msmtp-1.8.16.tar.xz
+								cd msmtp-1.8.16
+
+					4. clean any previous build
+							make clean
+
+					5. Configure msmtp to detect libraries
+							./configure
+							
+							Confirm output shows:
+							TLS support ............ : yes (Library: GnuTLS)
+							
+					6. build and install
+							make
+							sudo make install
+							
+					7. Verify msmtp installation and TLS
+							msmtp --version
+							
+							You should see TLS/SSL library: GnuTLS.
+				
+				
+		Configure Gmail for SMTP access:
+	
+					1. go to gmail account
+					
+					2. enable two-step verification
+					
+					3. go app passwords [https://myaccount.google.com/apppasswords]
+					
+					4. give any app name and click on create
+					
+					5. MUST TAKE A SCREENSHOT OF THE APP PASSWORD (16 - digit)
+		
+		Configure msmtp for Gmail SMTP (Scheduling)
+
+					1. create .MSMTPRC config file in pgsql folder 
+						its an invisible file
+							
+							navigate to this path /var/lib/pgsql
+								run vi .msmtprc
+						
+						add script:
+						
+								# Global defaults
+								defaults
+								auth on				 												# Turn on SMTP authentication
+								tls on																	# Use TLS encryption
+								tls_trust_file /etc/pki/tls/certs/ca-bundle.crt			# Path to trusted CA certificates for TLS
+								logfile ~/.msmtp.log												# Log file to record msmtp activity and errors
+
+								# Gmail SMTP account
+								account gmail														
+								host smtp.gmail.com											# Gmail SMTP server
+								port 587																# TLS port (STARTTLS)
+								from yyssb777@gmail.com									# Your email address (sender) FROM email address
+								user yyssb777@gmail.com									# Username for SMTP login (usually your email)	SMTP APP PASSWORD ENABLED EMAIL
+								password pcmj buaq rbaa ocak							#App password (not your Gmail account password)
+
+								# Set default account to use
+								account default : gmail
+						
+						2. save the file
+						
+						3. assign permissions to that file
+								sudo chown postgres:postgres /var/lib/pgsql/.msmtprc
+								sudo chmod 600 /var/lib/pgsql/.msmtprc
+								
+						4. test with demo mail
+								echo "Test email from msmtp with TLS" | msmtp your-email@gmail.com
+
+-----------------------------------------------------------------------------------------------------------------------
+# Working Script For Reference
+
+# Global defaults
+defaults
+auth on				 												# Turn on SMTP authentication
+tls on																	# Use TLS encryption
+tls_trust_file /etc/pki/tls/certs/ca-bundle.crt			# Path to trusted CA certificates for TLS
+logfile ~/.msmtp.log												# Log file to record msmtp activity and errors
+
+# Gmail SMTP account
+account gmail														
+host smtp.gmail.com											# Gmail SMTP server
+port 587																# TLS port (STARTTLS)
+from yyssb777@gmail.com									# Your email address (sender) FROM email address
+user yyssb777@gmail.com									# Username for SMTP login (usually your email)	SMTP APP PASSWORD ENABLED EMAIL
+password pcmj buaq rbaa ocak							#App password (not your Gmail account password)
+
+# Set default account to use
+account default : gmail
+
+-----------------------------------------------------------------------------------------------------------------------
+
+MSMTP
+/usr/local/src/msmtp-1.8.16
